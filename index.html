@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>imview</title>
+
+    <link rel="stylesheet" href="src/style.css">
+
+</head>
+<body>
+  <script src="src/jquery.js"></script>
+  <script src="src/fabric.js"></script>
+  <script src="src/script.js"></script>
+
+  <div id="base">
+    <div id="leftCol">
+      <p> leftCol </p>
+    </div>
+
+    <div id="rightCol">
+      <div id="divCont"> <canvas id="imCanvas"></canvas> </div>
+      <div>
+        <input type="range" id="frameRng" class="controls">
+        <input type="text" class="controls" id="nFrameEdit"></input>
+      </div>
+
+      <div id="controls1">
+        <button type="button" class="controls" id="backBtn">Back</button>
+        <button type="button" class="controls" id="playBtn">Play</button>
+        <button type="button" class="controls" id="fwdBtn">Forward</button>   
+        <input type="number" class="controls" id="curFrameEdit"></input>
+      </div>
+      <div id="controls2">
+       <div class="controls"></div>
+        <input type="number" class="controls" id="playSkip" value="1"></input>
+       <div class="controls"></div>
+      </div>
+    </div> <!-- rightCol -->
+
+  </div>
+
+  <script> $(document).ready(init); </script>
+
+</body>
+</html>

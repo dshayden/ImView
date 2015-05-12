@@ -1,0 +1,54 @@
+body {
+  margin: 0;
+  background-color: rgba(200, 200, 200, 1);
+}
+
+#base {
+  display: flex;
+  padding: 0px;
+  margin: 0px;
+  border: 0px;
+}
+
+#leftCol {
+  width: 20%;
+  margin-right: 10px;
+  background-color: rgba(200, 200, 200, 1);
+}
+
+#rightCol {
+  margin-top: 10px;
+  background-color: rgba(200, 200, 200, 1);
+}
+
+#divCont {
+  background-color: rgba(200, 200, 200, 1);
+  height: 480px;
+  width: 640px;
+  position: static;
+}
+
+#imCanvas {
+  background-color: rgba(200, 200, 200, 1);
+}
+
+.controls {
+  width: 5em;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+input[type=range].controls {
+  width: 565px; /* 640 - 75 */
+}
+
+input[type=number].controls {
+  background-color: rgba(200, 200, 0, 0.5);
+  text-align: center;
+}
+
+input[type=text].controls:disabled {
+  text-align: center;
+  background-color: white;
+}
