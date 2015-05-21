@@ -11,13 +11,15 @@ body {
 }
 
 #leftCol {
-  width: 20%;
+  width: 30%;
   margin-right: 10px;
+  margin-top: 10px;
   background-color: rgba(200, 200, 200, 1);
 }
 
 #rightCol {
   margin-top: 10px;
+  width: 80%;
   background-color: rgba(200, 200, 200, 1);
 }
 
@@ -34,6 +36,7 @@ body {
 
 .controls {
   width: 5em;
+  background-color: rgba(175, 175, 175, 0.5);
   margin: 0;
   border: 0;
   padding: 0;
@@ -43,7 +46,7 @@ input[type=range].controls {
   width: 565px; /* 640 - 75 */
 }
 
-input[type=number].controls {
+#playSkip, #curFrameEdit {
   background-color: rgba(200, 200, 0, 0.5);
   text-align: center;
 }
@@ -51,4 +54,14 @@ input[type=number].controls {
 input[type=text].controls:disabled {
   text-align: center;
   background-color: white;
+}
+
+#aGrpTblDiv {
+  font-size: 75%;
+  width: 75%;
+}
+
+#aGrpControlsDiv {
+  padding: 10px;
+  margin: 10px;
 }

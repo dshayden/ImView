@@ -4,17 +4,79 @@
     <meta charset="UTF-8">
     <title>imview</title>
 
+    <link rel="stylesheet" href="src/ui/jquery-ui.css">
+    <link rel="stylesheet" href="src/ui/jquery-ui.structure.css">
+    <link rel="stylesheet" href="src/ui/jquery-ui.theme.css">
+    <link rel="stylesheet" href="src/tables/jquery.dataTables.css">
+    <link rel="stylesheet" href="src/tables/extensions/TableTools/css/dataTables.tableTools.css">
+
     <link rel="stylesheet" href="src/style.css">
 
 </head>
 <body>
   <script src="src/jquery.js"></script>
+  <script src="src/ui/jquery-ui.js"></script>
+  <script src="src/jquery.alphanum.js"></script>
+  
   <script src="src/fabric.js"></script>
+  <script src="src/tables/jquery.dataTables.js"></script>
+  <script src="src/tables/extensions/TableTools/js/dataTables.tableTools.js"></script>
+  
+  <script src="src/smooth.js"></script>
+  <script src="src/lazy.js"></script>
+  <script src="src/annotations.js"></script>
   <script src="src/script.js"></script>
 
   <div id="base">
     <div id="leftCol">
-      <p> leftCol </p>
+      <div class="accordion">
+        <h3>Playback</h3> 
+        <div><p></p></div>
+      </div>
+      <!-- <div class="accordion"> -->
+      <!--   <h3>Viewing Options</h3>  -->
+      <!--   <div><p></p></div> -->
+      <!-- </div> -->
+      <div class="accordion">
+        <h3>Options</h3> 
+        <div>
+          <button type="button" id="saveBtn">Save</button>
+        </div>
+      </div>
+      <div class="accordion">
+        <h3>Annotation Groups</h3> 
+        <div>
+          <button type="button" id="aAddBtn">Add</button>
+          <button type="button" id="aEditBtn">Edit</button>
+          <button type="button" id="aDelBtn">Delete</button>
+          <div id="aGrpTblDiv"> </div>
+        </div>
+      </div>
+      <div class="accordion">
+        <h3>Annotation Ranges</h3> 
+        <div>
+          <select id="aTSelect">
+            <option value="0">Rect</option>
+            <option value="1">Point</option>
+            <option value="2">Group</option>
+            <!-- <option value="3">Event</option> -->
+          </select>
+          <button type="button" id="aTBeginBtn">Begin</button>
+          <button type="button" id="aTContinueBtn">Continue</button>
+          <button type="button" id="aTEndBtn">End</button>
+          <button type="button" id="aTDelBtn">Del</button>
+          <div id="aRngTblDiv"> </div>
+        </div>
+     </div>
+      <div class="accordion">
+        <h3>Annotation Instances</h3> 
+        <div>
+          <button type="button" id="aiDelBtn">Delete</button>
+          <button type="button" id="aiGotoBtn">Goto</button>
+          <div id="aInstTblDiv"> </div>
+        <p></p>
+        </div>
+     </div>
     </div>
 
     <div id="rightCol">
@@ -28,14 +90,22 @@
         <button type="button" class="controls" id="backBtn">Back</button>
         <button type="button" class="controls" id="playBtn">Play</button>
         <button type="button" class="controls" id="fwdBtn">Forward</button>   
-        <input type="number" class="controls" id="curFrameEdit"></input>
+        <input class="controls" id="curFrameEdit"></input>
       </div>
       <div id="controls2">
        <div class="controls"></div>
-        <input type="number" class="controls" id="playSkip" value="1"></input>
+        <!-- <input type="number" class="controls" id="playSkip" value="1"></input> -->
+        <input class="controls" id="playSkip" value="1"></input>
        <div class="controls"></div>
       </div>
     </div> <!-- rightCol -->
+
+    <div id="grpEditDialog" title="Edit Group" style="display:none;">
+      Name:
+      <input type="text" id="grpNameInput"></input>
+      Color:
+      <input type="color" id="grpColorInput"></input>
+    </div>
 
   </div>
 

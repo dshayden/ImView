@@ -7,19 +7,226 @@ var imIdx;
 var isLoading = false;
 var isPlaying = false;
 
+var curSelData = null;
+var curSelRid = -1;
+
+var maxGid = 0,
+    maxRid = 0,
+    maxAid = 0;
+
+
 function init() {
-  $.getJSON("k2_01000.json", function(data) {
-    imgs = data.frames;
-    imIdx = 0;
+  $.getJSON("data/imgs.json", function(data) {
+    imgs = data.frames; imIdx = 0;
+
+    // canvas
+    var canvas = document.getElementById("imCanvas");
+    canvas.width = $("#divCont").width();
+    canvas.height = $("#divCont").height();
+    fcanvas = new fabric.Canvas(canvas);
+    fcanvas.selection = false; // disable group (multiple) selection
+    fcanvas.uniScaleTransform = true;
+    // fcanvas.defaultCursor = 'url("src/point.cur") 10 10, crosshair';
+
+
+    fcanvas.on('mouse:up', function(e) {
+    });
+
+    // initialize bgImg
+    imPath = imgs[imIdx];
+    bgImEl = $('<img src="' + imPath + '">').get(0);
+    bgImg = new fabric.Image(bgImEl, {left: 0, top: 0});
+    fcanvas.setBackgroundImage(bgImg);
+
+    bgImEl.addEventListener("load", function() {
+      drawAnnotations(imIdx, false);
+      fcanvas.renderAll();
+      isLoading = false;
+    });
+    setImage(imIdx);
 
     // callbacks
     $(":root").keypress(processKeys);
     $("#playBtn").click(onPlayBtn);
     $("#backBtn").click(onBackBtn);
     $("#fwdBtn").click(onFwdBtn);
+    $("#aAddBtn").click(onAAddBtn);
+    $("#aEditBtn").click(onAEditBtn);
+    $("#aTBeginBtn").click(onATBeginBtn);
+    $("#aTEndBtn").click(onATEndBtn);
+    $("#aTContinueBtn").click(onATContinueBtn);
+
+    $("#aiDelBtn").click(onAiDelBtn);
+    $("#aiGotoBtn").click(onAiGotoBtn);
+    $("#aTDelBtn").click(onATDelBtn);
+  
+    $("#curFrameEdit").numeric({
+      allowMinus: false,
+      allowThouSep: false,
+      allowDecSep: false,
+      min: 0
+    });
+    $("#playSkip").numeric({
+      allowThouSep: false,
+      allowDecSep: false,
+    });
+
+    $("#saveBtn").click(onSaveBtn);
+
+    $("#aTSelect").val("0");
+
+    grps = [];
+    $('#aGrpTblDiv').html( '<table cellpadding="0" cellspacing="0" border="0" class="display compact" id="aGrpTbl"></table>' );
+    $("#aGrpTbl").DataTable({ 
+      data: grps,
+      columns: [{"title": "Name" }],
+      columnDefs: [
+        {
+          "targets": [0],
+          "searchable": false,
+          "visible": false,
+          "sTitle": 'gid'
+        },
+        {
+          "targets": [1],
+          "visible": true,
+          "searchable": true,
+          "sTitle": 'Name'
+        },
+        {
+          "targets": [2],
+          "visible": true,
+          "searchable": false,
+          "sTitle": 'Color'
+        }
+      ],
+      dom: 'T<"clear">lfrtip',
+      paging: false,
+      bInfo: false,
+      order: [0, 'desc'],
+      tableTools: {
+        sSwfPath: "src/tables/extensions/TableTools/swf/copy_csv_xls_pdf.swf",
+        sRowSelect: "os",
+        sRowSelector: 'td:first-child',
+        aButtons: []
+      }
+    });
+
+    $('#aRngTblDiv').html( '<table cellpadding="0" cellspacing="0" border="0" class="display compact" id="aRngTbl"></table>' );
+    $("#aRngTbl").DataTable({ 
+      data: [],
+      columnDefs: [
+        {
+          "targets": [0],   // rid
+          "searchable": false,
+          "visible": false,
+          "sTitle": "rid"
+        },
+        {
+          "targets": [1],   // gid
+          "visible": false,
+          "searchable": false 
+        },
+        {
+          "targets": [2],   // tid
+          "visible": false,
+          "searchable": false
+        },
+        {
+          "targets": [3],   // Name 
+          "visible": true,
+          "searchable": true, 
+          "sTitle": "Name"
+        },
+        {
+          "targets": [4],   // Type 
+          "visible": true,
+          "searchable": true,
+          "sTitle": "Type"
+        },
+        {
+          "targets": [5],   // Begin Frame 
+          "visible": true,
+          "searchable": true,
+          "sTitle": "Begin"
+        },
+        {
+          "targets": [6],   // End Frame 
+          "visible": true,
+          "searchable": true,
+          "sTitle": "End"
+        },
+        {
+          "targets": [7],   // AnnotationRange
+          "visible": false,
+          "searchable": false,
+          "sTitle": "Obj"
+        }
+      ],
+      dom: 'T<"clear">lfrtip',
+      paging: false,
+      bInfo: false,
+      order: [0, 'desc'],
+      tableTools: {
+        sSwfPath: "src/tables/extensions/TableTools/swf/copy_csv_xls_pdf.swf",
+        sRowSelect: "os",
+        sRowSelector: 'td:first-child',
+        aButtons: []
+      }
+    });
+
+    $('#aInstTblDiv').html( '<table cellpadding="0" cellspacing="0" border="0" class="display compact" id="aInstTbl"></table>' );
+    $("#aInstTbl").DataTable({ 
+      data: [],
+      columnDefs: [
+        {
+          "targets": [0],   // aid 
+          "searchable": false,
+          "visible": false
+        },
+        {
+          "targets": [1],   // rid
+          "searchable": false,
+          "visible": false
+        },
+        {
+          "targets": [2],   // Name 
+          "visible": true,
+          "searchable": true, 
+          "sTitle": "Name"
+        },
+        {
+          "targets": [3],   // Type 
+          "visible": true,
+          "searchable": true,
+          "sTitle": "Type"
+        },
+        {
+          "targets": [4],   // Frame 
+          "visible": true,
+          "searchable": true,
+          "sTitle": "Frame"
+        }
+      ],
+      dom: 'T<"clear">lfrtip',
+      paging: false,
+      bInfo: false,
+      order: [0, 'desc'],
+      tableTools: {
+        sSwfPath: "src/tables/extensions/TableTools/swf/copy_csv_xls_pdf.swf",
+        sRowSelect: "os",
+        sRowSelector: 'td:first-child',
+        aButtons: []
+      }
+    });
+
+    $(".accordion").accordion({
+      collapsible: true,
+      active: false,
+    });
+    $(".accordion").accordion({clearStyle: true, autoHeight: false});
 
     var frameRng = $("#frameRng");
-
     frameRng.change(function(e) {setImage($("#frameRng").val()-1);});
     frameRng.prop({
       'min': 1,
@@ -40,59 +247,92 @@ function init() {
       setImage(idx);
     });
 
-    // canvas
-    var canvas = document.getElementById("imCanvas");
-    canvas.width = $("#divCont").width();
-    canvas.height = $("#divCont").height();
-
-    fcanvas = new fabric.Canvas(canvas);
-    r1 = createRect('rgba(0, 255, 0, 0.4', 100, 100, 50, 100);
-    r2 = createRect('rgba(0, 0, 255, 0.4', 200, 100, 50, 100);
-
-    // initialize bgImg
-    imPath = imgs[imIdx];
-    bgImEl = $('<img src="' + imPath + '">').get(0);
-    bgImg = new fabric.Image(bgImEl, {left: 0, top: 0});
-    fcanvas.setBackgroundImage(bgImg);
-
-    bgImEl.addEventListener("load", function() {
-      fcanvas.renderAll();
-      isLoading = false;
-    });
-
-    setImage(imIdx);
-    fcanvas.uniScaleTransform = true;
-    fcanvas.add(r1); fcanvas.add(r2);
   });
+}
+
+function drawAnnotations(frame, doRender) {
+  var allData = $("#aRngTbl").DataTable().columns(7).data();
+  allData[0].forEach( function(aRng, idx, arr) {
+    aRng.drawReadable(fcanvas, imIdx);
+  });
+  rid = curSelRid; obj = curSelData;
+  if (curSelRid != -1) {
+    curSelData.drawEditable(fcanvas, imIdx, function() {
+      curSelRid = rid;
+      curSelData = obj;
+    });
+  }
+  if (doRender) fcanvas.renderAll();
+}
+
+
+function pad (str, max) {
+  return str.length < max ? pad("0" + str, max) : str;
+}
+
+function addGroupAnnotationUi() {
+  // todo: make alpha value user-settable
+  color = randomColor(0.6);
+
+  var grpTable = $("#aGrpTbl").DataTable();
+  var gid = maxGid + 1;
+  maxGid = gid;
+
+  name = "Annotation-" + pad( gid.toString(), 3 );
+  grpTable.row.add( [maxGid, name, color] ).draw();
+  colorizeGrpTbl();
+
+  $(".accordion").accordion("refresh");
+}
+
+function randomColor(alpha) {
+  r = Math.round(Math.random() * 255);
+  g = Math.round(Math.random() * 255);
+  b = Math.round(Math.random() * 255);
+  a = alpha;
+
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+
+function randomRect() {
+  x = Math.random() * 320; y = Math.random() * 240;
+  w = 30+Math.random() * 180; h = 30+Math.random() * 140;
+  r = Math.round(Math.random() * 255);
+  g = Math.round(Math.random() * 255);
+  b = Math.round(Math.random() * 255);
+  a = 0.6;
+
+  r = createRect('rgba('+r+','+g+','+b+','+a+')', x, y, w, h);
+  return r;
 }
 
 function createRect(cstr, left, top, width, height) {
-  var rect = new fabric.Rect({
-    'fill': cstr,
-    'width': width, 'height': height,
-    'left': left, 'top': top,
-    'lockRotation': true
-  });
-  rect.setControlsVisibility({mtr: false});
-  return rect;
+var rect = new fabric.Rect({
+  'fill': cstr,
+  'width': width, 'height': height,
+  'left': left, 'top': top,
+  'lockRotation': true
+});
+rect.setControlsVisibility({mtr: false});
+return rect;
 }
 
+// todo: call obj method to update its size/loc once ranges/handlers are ready
 function relativeResize(obj, dl, dt, dx, dy) {
-  obj.set('width', obj.get('width') + dx);
-  obj.set('height', obj.get('height') + dy);
-  obj.set('top', obj.get('top') + dt);
-  obj.set('left', obj.get('left') + dl);
-  fcanvas.renderAll();
+if (!obj) return;
+obj.set('width', obj.get('width') + dx);
+obj.set('height', obj.get('height') + dy);
+obj.set('top', obj.get('top') + dt);
+obj.set('left', obj.get('left') + dl);
+obj.setCoords();
+fcanvas.renderAll();
 }
 
 function setImage(idx) {
   imPath = imgs[idx];
   bgImEl.src = imgs[idx];
-  // $("#curFrameEdit").val(idx+1);
-  // $("#frameRng").prop('value', idx+1);
   $("#curFrameEdit").val(idx);
   $("#frameRng").prop('value', idx);
-
   imIdx = idx;
 }
 
@@ -152,7 +392,74 @@ function onPlayBtn(evt) {
   }
 }
 
+function onAAddBtn(evt) {
+  addGroupAnnotationUi();
+}
+
+function removeCurrentEditable() {
+  if (curSelRid == -1) return;
+
+  var extantRow = $("#aRngTbl").DataTable().row( function(idx, data, node) {
+    if (data[0] == curSelRid) return true;
+    else return false;
+  });
+  if (extantRow.length == 1) {
+    d = extantRow.data();
+    rngObj = extantRow.data()[7];
+    rngObj.deleteEditable(fcanvas);
+  }
+  curSelRid = -1;
+}
+
+
+function onATBeginBtn(evt) {
+  var rows = $("#aGrpTbl").DataTable().rows('.selected').data();
+  if (rows.length == 0) return;
+  removeCurrentEditable();
+
+  var row = rows[0];
+  var name = row[1],
+      color = row[2],
+      gid = row[0];
+
+  var rid = maxRid + 1,
+      type = $("#aTSelect option:selected").text(),
+      begin = -1,
+      end = -1;
+
+  tid = parseInt($("#aTSelect").val())
+  if (tid == 0) var data = new RectangleRange({fill: color}, rid);
+  else if (tid == 1) var data = new PointRange({fill: color}, rid);
+  else if (tid == 2) var data = new GroupRange({fill: color}, rid);
+
+  rngRow = [rid, gid, tid, name, type, begin, end, data];
+  maxRid = rid;
+
+  $("#aRngTbl").DataTable().row.add(rngRow).draw();
+  colorizeRngTbl();
+
+  $(".accordion").accordion("refresh");
+
+  data.drawEditable(fcanvas, imIdx, function() {
+    curSelRid = rid;
+    curSelData = data;
+  });
+
+  // data.drawEditable(fcanvas, imIdx, function() {
+  //   curSelRid = rid;
+  //   curSelData = data;
+  // });
+}
+// function selectCb() {
+//   curSelRid = rid;
+//   curSelData = data;
+// }
+
 function processKeys(evt) {
+  // console.log(evt.keyCode);
+
+  evt.key = String.fromCharCode(evt.keyCode);
+
   if (evt.key == 'g' || evt.key == 'G') {
     btn = $("#playBtn")[0];
     if (!isPlaying) {
@@ -173,21 +480,331 @@ function processKeys(evt) {
     playSkipEl.val(-playSkipVal);
   }
 
-  var obj = fcanvas.getActiveObject();
-  if (!obj) return;
+  // var obj = fcanvas.getActiveObject();
+  // if (!obj) return;
+  var obj = null;
 
-  var v = 1; var bigMult = 10;
+  var v = 1; var bigMult = 20;
   var val = evt.shiftKey? v*bigMult : v;
+
+  if (evt.key == 't' || evt.key == 'T') {
+    imIdx = Math.max(0, Math.min( imIdx + parseInt($("#playSkip").val()), imgs.length-1 ));
+    setImage(imIdx);
+  }
 
   if (evt.key == 'a' || evt.key == 'A') relativeResize(obj, -val, 0, 0, 0);
   else if (evt.key == 'd' || evt.key == 'D') relativeResize(obj, val, 0, 0, 0);
   else if (evt.key == 'w' || evt.key == 'W') relativeResize(obj, 0, -val, 0, 0);
   else if (evt.key == 's' || evt.key == 'S') relativeResize(obj, 0, val, 0, 0);
-  else if (evt.keyCode == 39) relativeResize(obj, 0, 0, val, 0);
-  else if (evt.keyCode == 37) relativeResize(obj, 0, 0, -val, 0);
-  else if (evt.keyCode == 38) relativeResize(obj, 0, 0, 0, -val);
-  else if (evt.keyCode == 40) relativeResize(obj, 0, 0, 0, val);
+  else if (evt.key == 'l' || evt.key == 'L') relativeResize(obj, 0, 0, val, 0);
+  else if (evt.key == 'j' || evt.key == 'J') relativeResize(obj, 0, 0, -val, 0);
+  else if (evt.key == 'k' || evt.key == 'K') relativeResize(obj, 0, 0, 0, -val);
+  else if (evt.key == 'i' || evt.key == 'I') relativeResize(obj, 0, 0, 0, val);
   else if (evt.keyCode == 46) {} // delete annotation
-  else if (evt.keyCode == ' ') console.log("commit annotation");
-  else console.dir(evt);
+  else if (evt.key == 'f' || evt.key == 'F') {
+    commitAnnotation();
+  }
+  else {} //console.dir(evt);
+}
+
+function commitAnnotation() {
+  if (curSelRid == -1) return;
+
+  // get RangeAnnotation for curSelRid 
+  var aRow = $("#aRngTbl").DataTable().row( function(idx, data, node) {
+    if (data[0] == curSelRid) return true;
+    else return false;
+  });
+  data = $("#aRngTbl").DataTable().row(aRow[0]).data();
+  obj = data[7]; frame = imIdx;
+
+  // commit change
+  var res = obj.commit(frame);
+  if (!res) return;
+
+  // todo: think about how to handle redundant group entries (should only have 2)
+  // hmm, how to handle GroupRange, which should only have 1/2 entries?
+
+  // add to annotation table
+  var aid = maxAid + 1,
+      rid = data[0],
+      name = data[3],
+      type = data[4],
+      rngTbl = $("#aRngTbl").DataTable(),
+      instTbl = $("#aInstTbl").DataTable();
+  var row = [aid, rid, name, type, frame];
+
+  // if there is an annotation with this (rid, frame), then replace it
+  var extantRow = $("#aInstTbl").DataTable().row( function(idx, data, node) {
+    if (data[1] == rid && data[4] == frame) return true;
+    else return false;
+  } );
+  if (extantRow.length == 1) { // update row
+    extantRow.data(row);
+    instTbl.draw();
+    drawAnnotations(frame, true);
+    return;
+  }
+  $("#aInstTbl").DataTable().row.add(row).draw();
+  maxAid = aid;
+
+  // update begin/end frame in rngTbl
+  rng = obj.range();
+  data[5] = rng[0]; data[6] = rng[1];
+  $("#aRngTbl").DataTable().row(aRow[0]).data(data);
+  drawAnnotations(frame, true);
+}
+
+function onATContinueBtn() {
+  var rows = $("#aRngTbl").DataTable().rows('.selected').data();
+  if (rows.length == 0) return;
+  if (rows.length > 1) return; // todo: use first, deselect other rows
+  data = rows[0]; rid = data[0]; 
+  if (curSelRid == rid) return;
+  removeCurrentEditable();
+
+  gid = data[1]; obj = data[7];
+  var gRow = $("#aGrpTbl").DataTable().row( function(idx, data, node) {
+    if (data[0] == gid) return true;
+    else return false;
+  });
+  color = $("#aGrpTbl").DataTable().row(gRow[0]).data()[2];
+  obj.drawEditable(fcanvas, imIdx, function() {
+    curSelRid = rid;
+    curSelData = data[7];
+  });
+}
+
+function onATEndBtn() {
+  removeCurrentEditable();
+}
+
+function hexStrToRgbaStr(s) {
+  var r = parseInt(s.slice(1,3), 16).toString(),
+      g = parseInt(s.slice(3,5), 16).toString(),
+      b = parseInt(s.slice(5,7), 16).toString(),
+      a = "0.6";
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+
+// note, this ignores the alpha component
+function rgbaStrToHexStr(s) {
+  var rgb = s.split(',');
+  var r = parseInt(rgb[0].split('(')[1]).toString(16);
+  var g = parseInt( rgb[1] ).toString(16);
+  var b = parseInt( rgb[2] ).toString(16);
+  if (r.length==1) r = '0'+r;
+  if (g.length==1) g = '0'+g;
+  if (b.length==1) b = '0'+b;
+  return '#'+r+g+b;
+}
+
+function onAEditBtn() {
+  // get currently selected Annotation Group row
+  var rows = $("#aGrpTbl").DataTable().rows('.selected').data();
+  if (rows.length == 0) return;
+  row = rows[0];
+
+  var color = rgbaStrToHexStr(row[2]), 
+      name = row[1],
+      gid = row[0];
+  $("#grpColorInput").val(color);
+  $("#grpNameInput").val(name);
+  $("grpNameInput").select();
+
+  $("#grpEditDialog").dialog({ 
+    modal: true,
+    buttons: {
+      Ok: function() {
+        var newName = $("#grpNameInput").val(),
+            newColor = $("#grpColorInput").val();
+
+        if (newName.length == 0) {
+          console.log('cannot have empty name');
+          return;
+        }
+
+        if ( newName === name && newColor === color ) {
+          $(this).dialog("close");
+          return;
+        }
+
+        // update grpTbl row, rngTbl entries, relevant annotation range objs
+        var newRgbaStr = hexStrToRgbaStr(newColor);
+        var newRow = row;
+        newRow[1] = newName; newRow[2] = newRgbaStr;
+        $("#aGrpTbl").DataTable().row('.selected').data(newRow).draw();
+        colorizeGrpTbl();
+        colorizeRngTbl();
+        // colorizeInstTbl();
+
+
+        $("#aRngTbl").DataTable().rows().every( function() {
+          var data = this.data();
+          if (data[1] != gid) return;
+
+          var obj = data[7];
+          obj.setStyle( {fill: newRgbaStr} );
+
+          var newRngRow = data;
+          newRngRow[3] = newName;
+          this.data(newRngRow);
+
+          // todo: specially redraw editable here so curSelData is valid?
+          // between now and next frame draw, or are we ok?
+          obj.deleteReadable(fcanvas);
+          obj.deleteEditable(fcanvas);
+
+          var rid = data[0];
+          $("#aInstTbl").DataTable().rows().every( function() {
+            var _data = this.data();
+            if (_data[1] != rid) return;
+            var newInstRow = _data;
+            newInstRow[2] = newName;
+            this.data(newInstRow);
+          });
+        });
+        drawAnnotations(imIdx, true);
+        $(this).dialog("close");
+      },
+      Cancel: function() {
+        $(this).dialog("close");
+      }
+    }
+  });
+}
+
+function colorizeGrpTbl() {
+  $("#aGrpTbl").DataTable().rows( function(idx, data, node) {
+    $(":last-child", node).css("background-color", data[2]);
+  });
+}
+
+function colorizeRngTbl() {
+  $("#aRngTbl").DataTable().rows( function(idx, data, node) {
+    gid = data[1];
+    color = '';
+
+    $("#aGrpTbl").DataTable().row( function(_idx, _data, _node) {
+      if (_data[0] == gid) color = _data[2];
+    });
+    $(":first-child", node).css("background-color", color);
+  });
+}
+
+function onAiDelBtn() {
+  // get rid, rngObj from selection, update rngObj, rngTbl, instTbl, redraw frame
+  $("#aInstTbl").DataTable().rows('.selected').every( function() {
+    var data = this.data();
+    var rid = data[1]; var frame = data[4];
+
+    // uncommit changes from underlying AnnotationRange objects
+    $("#aRngTbl").DataTable().row( function(_idx,_data,_node) {
+      if (_data[0] != rid) return;
+      rngObj = _data[7];
+      rngObj.uncommit(frame);
+    });
+  });
+  $("#aInstTbl").DataTable().rows('.selected').remove().draw();
+
+  // update begin/end frames of #aRngTbl
+  $("#aRngTbl").DataTable().rows( function(idx,data,node) {
+    newRngRow = data; rng = data[7].range();
+    newRngRow[5] = rng[0]; newRngRow[6] = rng[1];
+    $("#aRngTbl").DataTable().row(data).data(newRngRow);
+  });
+
+  var allData = $("#aRngTbl").DataTable().columns(7).data();
+  allData[0].forEach( function(aRng, idx, arr) {
+    aRng.drawReadable(fcanvas, imIdx);
+  });
+}
+
+function onAiGotoBtn() {
+  $("#aInstTbl").DataTable().row('.selected').every( function() {
+    frame = this.data()[4];
+    setImage(frame);
+  });
+}
+
+function onATDelBtn() {
+  $("#aRngTbl").DataTable().rows('.selected').every( function() {
+    data = this.data();
+    rid = data[0]; obj = data[7];
+
+    // remove all instTbl rows with rid
+    $("#aInstTbl").DataTable().rows(function(idx, _data, node) {
+      if (_data[1] == rid) return true;
+      else return false;
+    }).remove();
+
+    // todo: handle curSelData?
+    obj.deleteEditable(fcanvas);
+    obj.deleteReadable(fcanvas);
+
+  }).remove().draw();
+
+  $("#aInstTbl").DataTable().rows().draw();
+}
+
+function onSaveBtn() {
+  // serialized = {
+  //  .gids[{}]
+  //       .gid
+  //       .name
+  //       .color
+  //       .rids[{}]
+  //            .rid: int
+  //            .tid: int
+  //            .obj = {
+  //                .data: [[]]
+  //                .range: [beginFrame, endFrame]
+  //                .type: '...'
+  //                .version: '...'
+  //            }
+  //  .dataset
+  //          .nFrames: int
+  //          .name: '...'
+  // }
+  // collect all grpTbl, rngTbl rows according to above
+  // into above form, then JSON-ify and send to server 
+  
+  s = {gids: [], tids: [], dataset: {nFrames: imgs.length, name: ''}};
+  $("#aGrpTbl").DataTable().rows().every(function() {
+    var gRow = this.data();
+    gidData = {gid: gRow[0], name: gRow[1], color: gRow[2], rids: []};
+    
+    $("#aRngTbl").DataTable().rows().every(function() {
+      var rRow = this.data();
+      if (rRow[1] != gidData.gid) return;
+      ridData = {rid: rRow[0], tid: rRow[2], data: rRow[7].serializable()};
+      gidData.rids.push(ridData);
+    });
+
+    s.gids.push(gidData);
+  });
+
+  // var jsonArray = JSON.parse(JSON.stringify(rng))
+  var jsonStr = JSON.stringify(s);
+  
+  $.ajax({
+    type: 'POST',
+    url: 'saveFile.php',
+    data: {'data': jsonStr},
+    success: function(msg) {
+      alert('saved!');
+    }
+  });
+
+
+  // var contents = new FormData();
+  // contents.append("data", [contents]);
+  // // contents.append("fname", "test.json");
+  // var xhr = new XMLHttpRequest();
+  // xhr.open( 'POST', "saveFile.php?t=" + Math.random(), true);
+  // xhr.setRequestHeader('Accept','*/*');
+  // xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
+  //
+  // // xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+  // xhr.send(contents);
 }
