@@ -140,6 +140,15 @@ var RectangleRange = function(style, id) {
     return bundle;
   };
 
+  this.fromSerializable = function(bundle) {
+    data = bundle.data;
+    mask = bundle.mask;
+    beginFrame = bundle.range[0];
+    endFrame = bundle.range[1];
+    return this;
+  }
+
+
   // private methods
   function randomRect() {
     x = Math.random() * 320; y = Math.random() * 240;
@@ -370,6 +379,14 @@ var PointRange = function(style, id) {
     // var jsonStr = JSON.stringify(rng);
     return bundle;
   };
+
+  this.fromSerializable = function(bundle) {
+    data = bundle.data;
+    mask = bundle.mask;
+    beginFrame = bundle.range[0];
+    endFrame = bundle.range[1];
+    return this;
+  }
 
   // return Array of data for a given frame
   this.data = function(frame) {
@@ -624,10 +641,16 @@ var GroupRange = function(style, id) {
     return bundle;
   };
 
+  this.fromSerializable = function(bundle) {
+    data = bundle.data;
+    mask = bundle.mask;
+    beginFrame = bundle.range[0];
+    endFrame = bundle.range[1];
+    return this;
+  }
 
 
   // private methods
-
   // set the group rids according to most recent selection, 0
   function setData(frame, datt) {
     var rids = datt.map(function(rngObj, idx, arr) {return rngObj.getRid(); });

@@ -46,7 +46,11 @@ function init() {
     setImage(imIdx);
 
     // callbacks
-    $(":root").keypress(processKeys);
+    // $(":root").keypress(processKeys);
+    $("#divCont").keypress(processKeys);
+    $("#divCont").focus();
+
+
     $("#playBtn").click(onPlayBtn);
     $("#backBtn").click(onBackBtn);
     $("#fwdBtn").click(onFwdBtn);
@@ -247,7 +251,12 @@ function init() {
       setImage(idx);
     });
 
+    // for testing
+    var f = '1432224079.json';
+    loadStateFromServer(f);
   });
+
+
 }
 
 function drawAnnotations(frame, doRender) {
@@ -459,7 +468,6 @@ function processKeys(evt) {
   // console.log(evt.keyCode);
 
   evt.key = String.fromCharCode(evt.keyCode);
-
   if (evt.key == 'g' || evt.key == 'G') {
     btn = $("#playBtn")[0];
     if (!isPlaying) {
@@ -473,7 +481,8 @@ function processKeys(evt) {
       playVideo(false);
     }
   }
-  else if ((evt.key == 'r' || evt.key == 'R') && evt.shiftKey) {
+  // else if ((evt.key == 'r' || evt.key == 'R') && evt.shiftKey) {
+  else if (evt.key == 'r' || evt.key == 'R') {
     // reverse playback direction
     var playSkipEl = $("#playSkip");
     var playSkipVal = parseInt(playSkipEl.val());
@@ -792,19 +801,52 @@ function onSaveBtn() {
     url: 'saveFile.php',
     data: {'data': jsonStr},
     success: function(msg) {
-      alert('saved!');
+      console.log('Saved!');
     }
   });
+}
 
+function loadStateFromServer(fname) {
+  // get json from server
+  $.post(
+      "loadFile.php",
+      {'fname': fname},
+      function(data) {
+        if (!data.gids || !data.dataset) {
+          console.log('Data returned, but is not correctly formatted; cannot load it');
+          return; 
+        }
 
-  // var contents = new FormData();
-  // contents.append("data", [contents]);
-  // // contents.append("fname", "test.json");
-  // var xhr = new XMLHttpRequest();
-  // xhr.open( 'POST', "saveFile.php?t=" + Math.random(), true);
-  // xhr.setRequestHeader('Accept','*/*');
-  // xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
-  //
-  // // xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-  // xhr.send(contents);
+        var grpTable = $("#aGrpTbl").DataTable(),
+            rngTable = $("#aRngTbl").DataTable(),
+            instTable = $("#aInstTbl").DataTable();
+        
+        data.gids.forEach(function(x, idx, arr) {
+          maxGid = maxGid + 1;
+          grpTable.row.add( [x.gid, x.name, x.color] );
+          x.rids.forEach(function(y, _idx, _arr) {
+            var obj = null;
+            if (y.data.type === 'Rect') obj = new RectangleRange({fill: x.color}, y.rid).fromSerializable(y.data);
+            else if (y.data.type === 'Point') obj = new PointRange({fill: x.color}, y.rid).fromSerializable(y.data);
+            else if (y.data.type === 'Group') obj = new GroupRange({fill: x.color}, y.rid).fromSerializable(y.data);
+            if (obj == null) {
+              console.log('Warning: unsupported annotation type: ' + y.data.type + ', skipping.');
+              return;
+            }
+            maxRid = maxRid + 1;
+            rngTable.row.add([y.rid, x.gid, y.tid, x.name, y.data.type, y.data.range[0], y.data.range[1], obj]);
+            y.data.mask.forEach(function(z, _idx, _arr) {
+              maxAid = maxAid + 1;
+              instTable.row.add( [maxAid, y.rid, x.name, y.data.type, z] );
+            });
+          });
+        });
+        grpTable.rows().draw();
+        rngTable.rows().draw();
+        instTable.rows().draw();
+        colorizeGrpTbl();
+        colorizeRngTbl();
+        $(".accordion").accordion("refresh");
+        drawAnnotations(imIdx, true);
+      });
 }
