@@ -1,7 +1,8 @@
 
 var RectangleRange = function(style, id) {
-
   // public methods
+  this.getType = function() {return 'Rect';};
+
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
     var isNew = false;
     if (!editObj) {
@@ -94,8 +95,6 @@ var RectangleRange = function(style, id) {
   };
 
   this.uncommit = function(frame) {
-    console.log('rectangeRng uncommit, frame: ' + frame);
-
     var idx = Lazy(mask).indexOf(frame);
     if (idx == -1) return false;
     
@@ -148,7 +147,6 @@ var RectangleRange = function(style, id) {
     return this;
   }
 
-
   // private methods
   function randomRect() {
     x = Math.random() * 320; y = Math.random() * 240;
@@ -178,7 +176,7 @@ var RectangleRange = function(style, id) {
   function getData(frame) {
     if (endFrame < frame || frame < beginFrame) return;
     var idx = Lazy(mask).indexOf(frame);
-    if (idx != -1) return data[idx];
+    if (idx != -1) return data[idx].slice(0);
 
     // else we must interpolate
     var idx = Lazy(mask).sortedIndex(frame);
@@ -209,7 +207,6 @@ var RectangleRange = function(style, id) {
     if (idx == -1) {
       var idx = Lazy(mask).sortedIndex(frame);
       mask.splice(idx, 0, frame);
-      console.log(mask);
       data.splice(idx, 0, dat);
       return;
     }
@@ -246,6 +243,20 @@ var RectangleRange = function(style, id) {
 
 var PointRange = function(style, id) {
   // public methods
+
+  this.getType = function() {return 'Point';};
+
+  // return center location for frame
+  this.loc = function(frame) {
+    var dat = getData(frame);
+
+    if (!dat) return false;
+    dat[0] = dat[0] + dat[2]/2;
+    dat[1] = dat[1] + dat[2]/2;
+    dat.splice(2,1);
+    return dat;
+  }
+
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
     var isNew = false;
     if (!editObj) {
@@ -257,7 +268,6 @@ var PointRange = function(style, id) {
       editObj = createPoint(fill, curData[0], curData[1], curData[2]);
 
       isNew = true;
-      
       storedMouseMoveEvents = fcanvas.__eventListeners['mouse:move'];
       storedCanvasCursor = fcanvas.hoverCursor;
       fcanvas.hoverCursor = '';
@@ -308,6 +318,15 @@ var PointRange = function(style, id) {
     }
 
     // handle hints, constraints here
+    if (hintFcn) {
+      var loc = hintFcn(frame);
+      if (loc) {
+        curData = [loc[0] - rad/2, loc[1] - rad/2, rad];
+        editObj.setTop(curData[1]);
+        editObj.setLeft(curData[0]);
+        // fcanvas.renderAll();
+      }
+    }
    
     editObj.setCoords();
     if (isNew) fcanvas.add(editObj);
@@ -433,6 +452,10 @@ var PointRange = function(style, id) {
   this.range = function() {return [beginFrame, endFrame];};
   this.isSpatial = function() {return spatial;};
 
+  this.setLocationHint = function( _hintFcn ) {
+    hintFcn = _hintFcn;
+  };
+
   // private methods
   function createPoint(cstr, left, top, radius) {
     var p = new fabric.Circle({
@@ -448,22 +471,23 @@ var PointRange = function(style, id) {
 
   // private functions
   function getData(frame) {
-    if (endFrame < frame || frame < beginFrame) return;
+    if (endFrame < frame || frame < beginFrame) return false;
     var idx = Lazy(mask).indexOf(frame);
-    if (idx != -1) return data[idx];
+    if (idx != -1) return data[idx].slice(0); // returns a copy
 
     // else we must interpolate
     var idx = Lazy(mask).sortedIndex(frame);
     arr = [mask[idx-1], mask[idx]];
     val = [data[idx-1], data[idx]];
-    
+
     // (val-min)/(max-min)
     var ratio = (frame-arr[0])/(arr[1]-arr[0]);
 
-    interp = [0,0,0,0];
-    for (i=0;i<4;i++) {
+    var interp = [0,0,0];
+    for (i=0;i<3;i++) {
       interp[i] = val[0][i]*(1-ratio) + val[1][i]*ratio;
     }
+
     return interp;
   }
 
@@ -508,17 +532,24 @@ var PointRange = function(style, id) {
   var storedMouseUpEvents = null;
   var storedMouseMoveEvents = null;
 
+  var hintFcn = null;
+
   var highlightFlag = false;
   return this;
 }
 
 var GroupRange = function(style, id) {
   // public methods
+
+  this.getType = function() {
+    return 'Group';
+  };
   
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
     curFrame = frame;
 
     if (storedMouseUpEvents) return;
+
     storedMouseUpEvents = fcanvas.__eventListeners['mouse:up'];
     var onMouseUp = function(e) {
       var obj = e.target;
@@ -550,47 +581,57 @@ var GroupRange = function(style, id) {
   }
 
   this.deleteReadable = function(fcanvas) {
-    // if (!intObj) return;
-    // fcanvas.remove(intObj);
-    // intObj = null;
+    if (!intObj) return;
+    fcanvas.remove(intObj);
+    intObj = null;
   }
 
   this.deleteEditable = function(fcanvas) {
     fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
+    storedMouseUpEvents = null;
 
     for (i=0;i<curData.length;i++) {
       curData[i].highlight(fcanvas,false);
       curData[i].drawReadable(fcanvas, frame, {});
     }
     if (curData.length>0) fcanvas.renderAll();
-    curData = [];       
+    // curData = [];       
   }
 
   this.drawReadable = function(fcanvas, frame, style) {
-    // if (!(beginFrame <= frame && frame <= endFrame)) {
-    //   if (intObj) this.deleteReadable(fcanvas);
-    //   return;
-    // }
-    //
-    // dat = getData(frame);
-    // if (!intObj) {
-    //   intObj = createPoint(fill, dat[0], dat[1], dat[2]);
-    //   intObj.fill = '';
-    //   intObj.stroke = fill;
-    //   intObj.strokeWidth = 3;
-    //   intObj.strokeDashArray = ['-', '-'];
-    //
-    //   intObj.selectable = false;
-    //
-    //   isNew = true;
-    //   fcanvas.add(intObj);
-    //   return;
-    // }
-    //
-    // intObj.left = dat[0];
-    // intObj.top = dat[1];
-    // intObj.radius = dat[2];
-    // intObj.setCoords();
+    if (!(beginFrame <= frame && frame <= endFrame)) {
+      if (intObj) this.deleteReadable(fcanvas);
+      return;
+    }
+    
+    dat = this.getData(frame); // list of rids
+    var locs = curRngObjs.map(function(rngObj, idx, arr) {return rngObj.loc(frame); });
+    
+    var xs = Lazy(locs.map(function(pair, idx, arr) {return pair[0];}));
+    var ys = Lazy(locs.map(function(pair, idx, arr) {return pair[1];}));
+
+    var left = xs.min();
+    var top = ys.min();
+    var width = xs.max() - left;
+    var height = ys.max() - top;
+
+    if (!intObj) {
+      intObj = createRect(fill, left, top, width, height);
+      intObj.fill = fill;
+      intObj.stroke = fill;
+      intObj.selectable = false;
+
+      isNew = true;
+      fcanvas.add(intObj);
+      fcanvas.sendToBack(intObj);
+      return;
+    }
+    
+    intObj.left = left;
+    intObj.top = top;
+    intObj.width = width;
+    intObj.height = height;
+    intObj.setCoords();
   }
 
   this.range = function() {return [beginFrame, endFrame];};
@@ -601,7 +642,6 @@ var GroupRange = function(style, id) {
     if (setData(frame, curData)) {
       beginFrame = Lazy(mask).min();
       endFrame = Lazy(mask).max();
-      console.log([beginFrame, endFrame]);
       return true;
     } else return false;
 
@@ -649,8 +689,34 @@ var GroupRange = function(style, id) {
     return this;
   }
 
+  // this breaks the standard abstraction model, but oh well
+  this.updateObjRefs = function() {
+    var dat = Lazy(data);
+
+    var allRngObjs = $("#aRngTbl").DataTable().columns(7).data()[0];
+    for (i=0;i<allRngObjs.length;i++) {
+      if ( dat.contains( allRngObjs[i].getRid() ) ) {
+        curRngObjs.push(allRngObjs[i]);
+      }
+    }
+  }
 
   // private methods
+  
+  function createRect(cstr, left, top, width, height) {
+    var rect = new fabric.Rect({
+      'fill': cstr,
+      'width': width, 'height': height,
+      'left': left, 'top': top,
+      'lockRotation': true
+    });
+    rect.setControlsVisibility({
+      bl: false, br: false, mb: false, ml: false, mr: false,
+      mt: false, tl: false, tr: false, mtr: false
+    });
+    return rect;
+  }
+
   // set the group rids according to most recent selection, 0
   function setData(frame, datt) {
     var rids = datt.map(function(rngObj, idx, arr) {return rngObj.getRid(); });
@@ -669,6 +735,8 @@ var GroupRange = function(style, id) {
     }
     data = rids;
     mask = [beginFrame, endFrame];
+
+    curRngObjs = datt;
     return true;
   }
 
@@ -696,5 +764,578 @@ var GroupRange = function(style, id) {
   var curFrame = -1;
   var beginFrameSet = false;
 
+  var curRngObjs = [];
+
+  return this;
+}
+
+var LineRange = function(style, id) {
+  // public methods
+  this.getType = function() {return 'Line';};
+
+  this.drawEditable = function(fcanvas, frame, selectCb, style) {
+    var isNew = false;
+    if (!editObj) {
+      cw = fcanvas.width; ch = fcanvas.height;
+      len = 20;
+
+      // x1, y1, x2, y2
+      curData = [cw*.5, ch*.5, cw*.5+len, ch*.5];
+      editObj = createLine(fill, curData);
+      isNew = true;
+      storedMouseMoveEvents = fcanvas.__eventListeners['mouse:move'];
+      storedCanvasCursor = fcanvas.hoverCursor;
+      fcanvas.hoverCursor = '';
+
+      var onMouseMove = function(e) {
+        if (editObj) {
+          y = e.e.layerY; x = e.e.layerX;
+          editObj.set('x2', x);
+          editObj.set('y2', y);
+          curData = [curData[0], curData[1], x, y];
+
+          editObj.setCoords();
+          fcanvas.renderAll();
+          fcanvas.setActiveObject(editObj);
+        }
+      };
+      fcanvas.__eventListeners['mouse:move'] = [onMouseMove];
+
+      editObj.on('selected', function() {
+        selectCb();
+      });
+
+      editObj.on('modified', function() {
+        o = editObj;
+        curData = [o.get('x1'), o.get('y1'), o.get('x2'), o.get('y2')];
+      });
+    }
+
+    // handle hints, constraints here
+    if (hintFcn) {
+      var loc = hintFcn(frame);
+      if (loc) {
+        editObj.set('x1', loc[0]);
+        editObj.set('y1', loc[1]);
+        curData[0] = loc[0];
+        curData[1] = loc[1];
+      }
+    }
+
+    editObj.setCoords();
+    if (isNew) fcanvas.add(editObj);
+    fcanvas.setActiveObject(editObj);
+  };
+
+  this.deleteReadable = function(fcanvas) {
+    if (!intObj) return;
+    fcanvas.remove(intObj);
+    intObj = null;
+  }
+
+  this.deleteEditable = function(fcanvas) {
+    if (!editObj) return;
+
+    // fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
+    // storedMosueUpEvents = null; 
+    
+    fcanvas.__eventListeners['mouse:move'] = storedMouseMoveEvents;
+    storedMouseMoveEvents = null;
+    fcanvas.hoverCursor = storedCanvasCursor;
+    storedCanvasCursor = '';
+
+    fcanvas.remove(editObj);
+    editObj = null;
+  }
+
+  this.drawReadable = function(fcanvas, frame, style) {
+    if (!(beginFrame <= frame && frame <= endFrame)) {
+      if (intObj) this.deleteReadable(fcanvas);
+      return;
+    }
+  
+    dat = getData(frame);
+    if (!intObj) {
+      intObj = createLine(fill, dat);
+      intObj.stroke = fill;
+      intObj.strokeWidth = 3;
+      intObj.strokeDashArray = [5, 5];
+
+      intObj.selectable = false;
+      intObj.rngClass = this;
+
+      isNew = true;
+      fcanvas.add(intObj);
+      return;
+    }
+
+    if (highlightFlag) intObj.strokeWidth = 10;
+    else intObj.strokeWidth = 3;
+
+    intObj.set('x1', dat[0]);
+    intObj.set('y1', dat[1]);
+    intObj.set('x2', dat[2]);
+    intObj.set('y2', dat[3]);
+
+    intObj.setCoords();
+  }
+
+  this.setStyle = function(style) {
+    fill = style.fill;
+  }
+
+  this.serializable = function() {
+    var bundle = {data: data, 
+                  mask: mask,
+                  range: this.range(),
+                  type: 'Line',
+                  version: '0.1'
+                 };
+    // var jsonArray = JSON.parse(JSON.stringify(rng))
+    // var jsonStr = JSON.stringify(rng);
+    return bundle;
+  };
+
+  this.fromSerializable = function(bundle) {
+    data = bundle.data;
+    mask = bundle.mask;
+    beginFrame = bundle.range[0];
+    endFrame = bundle.range[1];
+    return this;
+  }
+
+  // return Array of data for a given frame
+  this.data = function(frame) {
+    // return 
+  };                 
+
+  // return Array of mask for a given frame
+  this.mask = function(frame) {
+    // return mask[frmae];
+  };
+
+  this.highlight = function(fcanvas, flag) {
+    highlightFlag = flag;
+  }
+
+  // add current data to data/mask
+  this.commit = function(frame) {
+    if (!curData) return false;
+    setData(frame, curData);
+
+    beginFrame = Lazy(mask).min();
+    endFrame = Lazy(mask).max();
+    return true;
+  };
+  
+  this.uncommit = function(frame) {
+    var idx = Lazy(mask).indexOf(frame);
+    if (idx == -1) return false;
+    
+    mask.splice(idx, 1);
+    data.splice(idx, 1);
+
+    if (mask.length > 0) {
+      beginFrame = Lazy(mask).min();
+      endFrame = Lazy(mask).max();
+    } else {
+      beginFrame = -1;
+      endFrame = -1;
+    }
+    return true;
+  }
+
+  this.getRid = function() {return rid;};
+  this.range = function() {return [beginFrame, endFrame];};
+  this.isSpatial = function() {return spatial;};
+
+  this.setLocationHint = function( _hintFcn ) {
+    hintFcn = _hintFcn;
+  };
+
+  // private methods
+
+  function createLine(cstr, pts) {
+    var p = new fabric.Line( [pts[0], pts[1], pts[2], pts[3]], {
+      stroke: cstr,
+      strokeWidth: 5,
+    });
+
+    p.setControlsVisibility({
+      bl: false, br: false, mb: false, ml: false, mr: false,
+      mt: false, tl: false, tr: false, mtr: false
+    });
+
+    return p;
+  }
+
+  // private functions
+  function getData(frame) {
+    if (endFrame < frame || frame < beginFrame) return false;
+    var idx = Lazy(mask).indexOf(frame);
+    if (idx != -1) return data[idx].slice(0);
+
+    // else we must interpolate
+    var idx = Lazy(mask).sortedIndex(frame);
+    arr = [mask[idx-1], mask[idx]];
+    val = [data[idx-1], data[idx]];
+    
+    // (val-min)/(max-min)
+    var ratio = (frame-arr[0])/(arr[1]-arr[0]);
+
+    interp = [0,0,0,0];
+    for (i=0;i<4;i++) {
+      interp[i] = val[0][i]*(1-ratio) + val[1][i]*ratio;
+    }
+    return interp;
+  }
+
+  // add data to list in sorted order
+  function setData(frame, dat) {
+    if (mask.length == 0) {
+      mask.push(frame);
+      data.push(dat);
+      return;
+    }
+
+    var idx = Lazy(mask).indexOf(frame);
+    if (idx == -1) {
+      var idx = Lazy(mask).sortedIndex(frame);
+      mask.splice(idx, 0, frame);
+      data.splice(idx, 0, dat);
+      return;
+    }
+    data[idx] = dat;
+  }
+
+  // public properties
+  // this.isSpatial = false;
+
+  // private properties
+  var fill = style.fill;
+
+  var D = 4;
+  var data = new Array(0);
+  var mask = new Array(0);
+
+  var beginFrame = -1;
+  var endFrame = -1;
+  var spatial = true;
+
+  var intObj = null;  // object that's actually drawn to canvas
+  var editObj = null;
+
+  var curData = null; 
+  var rid = id;
+
+  var storedMouseUpEvents = null;
+  var storedMouseMoveEvents = null;
+
+  var hintFcn = null;
+
+  var highlightFlag = false;
+  return this;
+}
+
+var AngleRange = function(style, id) {
+  // public methods
+
+  this.getType = function() {return 'Angle';};
+
+  this.drawEditable = function(fcanvas, frame, selectCb, style) {
+    var isNew = false;
+    if (!editObj) {
+      cw = fcanvas.width; ch = fcanvas.height;
+
+      // x1, y1, x2, y2
+      curData = [cw*.5, ch*.5, 0];
+      editObj = createAngle(fill, curData[0], curData[1], curData[2]);
+
+      isNew = true;
+      storedMouseMoveEvents = fcanvas.__eventListeners['mouse:move'];
+      storedCanvasCursor = fcanvas.hoverCursor;
+      fcanvas.hoverCursor = '';
+
+      var onMouseMove = function(e) {
+        if (editObj) {
+          var y = e.e.layerY, x = e.e.layerX;
+          
+          // center point then get angle
+          var yy = y - curData[1];
+          var xx = x - curData[0];
+          var theta = Math.atan2(yy, xx);         
+
+          var sgns = angleSigns(theta);
+          var x2 = sgns[0]*Math.cos(sgns[2])*len + curData[0];
+          var y2 = sgns[1]*Math.sin(sgns[2])*len + curData[1];
+
+          editObj.set('x2', x2);
+          editObj.set('y2', y2);
+          curData = [curData[0], curData[1], theta];
+
+          editObj.setCoords();
+          fcanvas.renderAll();
+          fcanvas.setActiveObject(editObj);
+        }
+      };
+      fcanvas.__eventListeners['mouse:move'] = [onMouseMove];
+
+      editObj.on('selected', function() {
+        selectCb();
+      });
+
+      editObj.on('modified', function() {
+        o = editObj;
+        // curData = [o.get('x1'), o.get('y1'), o.get('x2'), o.get('y2')];
+        // curData = [o.get('x1'), o.get('y1'), o.get('x2'), o.get('y2')];
+      });
+    }
+
+    // handle hints, constraints here
+    if (hintFcn) {
+      var loc = hintFcn(frame);
+      if (loc) {
+        editObj.set('x1', loc[0]);
+        editObj.set('y1', loc[1]);
+
+        var sgns = angleSigns(curData[2]);
+        var x2 = sgns[0]*Math.cos(sgns[2])*len + loc[0];
+        var y2 = sgns[1]*Math.sin(sgns[2])*len + loc[1];
+        editObj.set('x2', x2);
+        editObj.set('y2', y2);
+
+        curData[0] = loc[0];
+        curData[1] = loc[1];
+      }
+    }
+
+    editObj.setCoords();
+    if (isNew) fcanvas.add(editObj);
+    fcanvas.setActiveObject(editObj);
+  };
+
+  this.deleteReadable = function(fcanvas) {
+    if (!intObj) return;
+    fcanvas.remove(intObj);
+    intObj = null;
+  }
+
+  this.deleteEditable = function(fcanvas) {
+    if (!editObj) return;
+
+    // fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
+    // storedMosueUpEvents = null; 
+    
+    fcanvas.__eventListeners['mouse:move'] = storedMouseMoveEvents;
+    storedMouseMoveEvents = null;
+    fcanvas.hoverCursor = storedCanvasCursor;
+    storedCanvasCursor = '';
+
+    fcanvas.remove(editObj);
+    editObj = null;
+  }
+
+  this.drawReadable = function(fcanvas, frame, style) {
+    if (!(beginFrame <= frame && frame <= endFrame)) {
+      if (intObj) this.deleteReadable(fcanvas);
+      return;
+    }
+  
+    dat = getData(frame);
+    if (!intObj) {
+      intObj = createAngle(fill, dat[0], dat[1], dat[2]);
+      intObj.stroke = fill;
+      intObj.strokeWidth = 3;
+      intObj.strokeDashArray = [2, 2];
+
+      intObj.selectable = false;
+      intObj.rngClass = this;
+
+      isNew = true;
+      fcanvas.add(intObj);
+      return;
+    }
+
+    if (highlightFlag) intObj.strokeWidth = 10;
+    else intObj.strokeWidth = 3;
+
+    intObj.set('x1', dat[0]);
+    intObj.set('y1', dat[1]);
+
+    var sgns = angleSigns(dat[2]);
+    var x2 = sgns[0]*Math.cos(sgns[2])*len + dat[0];
+    var y2 = sgns[1]*Math.sin(sgns[2])*len + dat[1];
+    intObj.set('x2', x2);
+    intObj.set('y2', y2);
+
+    intObj.setCoords();
+  }
+
+  this.setStyle = function(style) {
+    fill = style.fill;
+  }
+
+  this.serializable = function() {
+    var bundle = {data: data, 
+                  mask: mask,
+                  range: this.range(),
+                  type: 'Angle',
+                  version: '0.1'
+                 };
+    // var jsonArray = JSON.parse(JSON.stringify(rng))
+    // var jsonStr = JSON.stringify(rng);
+    return bundle;
+  };
+
+  this.fromSerializable = function(bundle) {
+    data = bundle.data;
+    mask = bundle.mask;
+    beginFrame = bundle.range[0];
+    endFrame = bundle.range[1];
+    return this;
+  }
+
+  // return Array of data for a given frame
+  this.data = function(frame) {
+    // return 
+  };                 
+
+  // return Array of mask for a given frame
+  this.mask = function(frame) {
+    // return mask[frmae];
+  };
+
+  this.highlight = function(fcanvas, flag) {
+    highlightFlag = flag;
+  }
+
+  // add current data to data/mask
+  this.commit = function(frame) {
+    if (!curData) return false;
+    setData(frame, curData);
+
+    beginFrame = Lazy(mask).min();
+    endFrame = Lazy(mask).max();
+    return true;
+  };
+  
+  this.uncommit = function(frame) {
+    var idx = Lazy(mask).indexOf(frame);
+    if (idx == -1) return false;
+    
+    mask.splice(idx, 1);
+    data.splice(idx, 1);
+
+    if (mask.length > 0) {
+      beginFrame = Lazy(mask).min();
+      endFrame = Lazy(mask).max();
+    } else {
+      beginFrame = -1;
+      endFrame = -1;
+    }
+    return true;
+  }
+
+  this.getRid = function() {return rid;};
+  this.range = function() {return [beginFrame, endFrame];};
+  this.isSpatial = function() {return spatial;};
+
+  this.setLocationHint = function( _hintFcn ) {
+    hintFcn = _hintFcn;
+  };
+
+  // private methods
+
+  function angleSigns(theta) {
+    if (0 <= theta && theta < Math.PI/2) return [1, 1, theta];
+    else if (Math.PI/2 <= theta && theta <= Math.PI) return [-1, 1, Math.PI/2 - (theta-Math.PI/2)];
+    else if (-Math.PI <= theta && theta <= -Math.PI/2) return [-1, -1, Math.PI/2 - (Math.abs(theta)-Math.PI/2)];
+    else if (-Math.PI/2 <= theta && theta < 0) return [1, -1, Math.abs(theta)];
+  }
+
+  function createAngle(cstr, x, y, theta) {
+    var sgns = angleSigns(theta);   
+    var x2 = sgns[0]*Math.cos(sgns[2])*len+x;
+    var y2 = sgns[1]*Math.sin(sgns[2])*len+y;
+
+    var p = new fabric.Line( [x, y, x2, y2], {
+      stroke: cstr,
+      strokeWidth: 5,
+    });
+
+    p.setControlsVisibility({
+      bl: false, br: false, mb: false, ml: false, mr: false,
+      mt: false, tl: false, tr: false, mtr: false
+    });
+
+    return p;
+  }
+
+  // private functions
+  function getData(frame) {
+    if (endFrame < frame || frame < beginFrame) return false;
+    var idx = Lazy(mask).indexOf(frame);
+    if (idx != -1) return data[idx].slice(0);
+
+    // else we must interpolate
+    var idx = Lazy(mask).sortedIndex(frame);
+    arr = [mask[idx-1], mask[idx]];
+    val = [data[idx-1], data[idx]];
+    
+    // (val-min)/(max-min)
+    var ratio = (frame-arr[0])/(arr[1]-arr[0]);
+
+    interp = [0,0,0,0];
+    for (i=0;i<4;i++) {
+      interp[i] = val[0][i]*(1-ratio) + val[1][i]*ratio;
+    }
+    return interp;
+  }
+
+  // add data to list in sorted order
+  function setData(frame, dat) {
+    if (mask.length == 0) {
+      mask.push(frame);
+      data.push(dat);
+      return;
+    }
+
+    var idx = Lazy(mask).indexOf(frame);
+    if (idx == -1) {
+      var idx = Lazy(mask).sortedIndex(frame);
+      mask.splice(idx, 0, frame);
+      data.splice(idx, 0, dat);
+      return;
+    }
+    data[idx] = dat;
+  }
+
+  // public properties
+  // this.isSpatial = false;
+
+  // private properties
+  var fill = style.fill;
+
+  var D = 4;
+  var data = new Array(0);
+  var mask = new Array(0);
+
+  var beginFrame = -1;
+  var endFrame = -1;
+  var spatial = true;
+
+  var intObj = null;  // object that's actually drawn to canvas
+  var editObj = null;
+
+  var curData = null; 
+  var rid = id;
+
+  var storedMouseUpEvents = null;
+  var storedMouseMoveEvents = null;
+
+  var hintFcn = null;
+  var len = 20;
+
+  var highlightFlag = false;
   return this;
 }

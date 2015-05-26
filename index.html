@@ -59,11 +59,13 @@
             <option value="0">Rect</option>
             <option value="1">Point</option>
             <option value="2">Group</option>
+            <option value="3">Angle</option>
             <!-- <option value="3">Event</option> -->
           </select>
           <button type="button" id="aTBeginBtn">Begin</button>
           <button type="button" id="aTContinueBtn">Continue</button>
           <button type="button" id="aTEndBtn">End</button>
+          <button type="button" id="aTLocConstraintBtn">Set Location Hint</button>
           <button type="button" id="aTDelBtn">Del</button>
           <div id="aRngTblDiv"> </div>
         </div>
@@ -105,6 +107,17 @@
       <input type="text" id="grpNameInput"></input>
       Color:
       <input type="color" id="grpColorInput"></input>
+    </div>
+
+    <div id="constraintsDialog1" title="Set Location Constraint" style="display:none;">
+      Select the annotation instance that you wish to set the constraint for.
+    </div>
+    <div id="constraintsDialog2" title="Set Location Constraint" style="display:none;">
+      Select the annotation instance that imposes the constraint.
+    </div>
+
+    <div id="constraintsDialog3" title="Set Location Constraint" style="display:none;">
+      Location Hint is set.
     </div>
 
   </div>

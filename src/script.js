@@ -14,7 +14,6 @@ var maxGid = 0,
     maxRid = 0,
     maxAid = 0;
 
-
 function init() {
   $.getJSON("data/imgs.json", function(data) {
     imgs = data.frames; imIdx = 0;
@@ -30,23 +29,13 @@ function init() {
 
 
     fcanvas.on('mouse:up', function(e) {
+
     });
 
-    // initialize bgImg
-    imPath = imgs[imIdx];
-    bgImEl = $('<img src="' + imPath + '">').get(0);
-    bgImg = new fabric.Image(bgImEl, {left: 0, top: 0});
-    fcanvas.setBackgroundImage(bgImg);
-
-    bgImEl.addEventListener("load", function() {
-      drawAnnotations(imIdx, false);
-      fcanvas.renderAll();
-      isLoading = false;
-    });
-    setImage(imIdx);
+    initCanvas();
+    setTimeout(initCanvas, 3000);
 
     // callbacks
-    // $(":root").keypress(processKeys);
     $("#divCont").keypress(processKeys);
     $("#divCont").focus();
 
@@ -59,6 +48,7 @@ function init() {
     $("#aTBeginBtn").click(onATBeginBtn);
     $("#aTEndBtn").click(onATEndBtn);
     $("#aTContinueBtn").click(onATContinueBtn);
+    $("#aTLocConstraintBtn").click(onATConstraintBtn);
 
     $("#aiDelBtn").click(onAiDelBtn);
     $("#aiGotoBtn").click(onAiGotoBtn);
@@ -250,13 +240,29 @@ function init() {
       }
       setImage(idx);
     });
+    var f = '1432666368.json';
+    loadStateFromServer(f);
 
     // for testing
-    var f = '1432224079.json';
-    loadStateFromServer(f);
+    // var f = '1432226322.json';
+    // loadStateFromServer(f);
+
   });
+}
 
+function initCanvas() {
+  imPath = imgs[imIdx];
+  bgImEl = $('<img src="' + imPath + '">').get(0);
+  bgImg = new fabric.Image(bgImEl, {left: 0, top: 0});
+  fcanvas.setBackgroundImage(bgImg);
 
+  bgImEl.addEventListener("load", function() {
+    console.log('load');
+    drawAnnotations(imIdx, false);
+    fcanvas.renderAll();
+    isLoading = false;
+  });
+  setImage(imIdx);
 }
 
 function drawAnnotations(frame, doRender) {
@@ -437,9 +443,10 @@ function onATBeginBtn(evt) {
       end = -1;
 
   tid = parseInt($("#aTSelect").val())
-  if (tid == 0) var data = new RectangleRange({fill: color}, rid);
+  if (tid == 0)      var data = new RectangleRange({fill: color}, rid);
   else if (tid == 1) var data = new PointRange({fill: color}, rid);
   else if (tid == 2) var data = new GroupRange({fill: color}, rid);
+  else if (tid == 3) var data = new AngleRange({fill: color}, rid);
 
   rngRow = [rid, gid, tid, name, type, begin, end, data];
   maxRid = rid;
@@ -512,6 +519,10 @@ function processKeys(evt) {
   else if (evt.keyCode == 46) {} // delete annotation
   else if (evt.key == 'f' || evt.key == 'F') {
     commitAnnotation();
+  }
+
+  else if (evt.key == 'p' || evt.key == 'P') {
+    initCanvas();
   }
   else {} //console.dir(evt);
 }
@@ -841,6 +852,17 @@ function loadStateFromServer(fname) {
             });
           });
         });
+
+        // hack for updating GroupEvent objects since they have
+        // references to other objects
+        // todo: handle obj refs when ranges get deleted
+        var allData = $("#aRngTbl").DataTable().columns(7).data()[0];
+        for (i=0;i<allData.length;i++) {
+          if (allData[i].getType() === 'Group') {
+            allData[i].updateObjRefs();
+          }
+        }
+
         grpTable.rows().draw();
         rngTable.rows().draw();
         instTable.rows().draw();
@@ -849,4 +871,55 @@ function loadStateFromServer(fname) {
         $(".accordion").accordion("refresh");
         drawAnnotations(imIdx, true);
       });
+}
+
+function onATConstraintBtn() {
+  var rng1 = null;
+
+  var handler = function() {
+    console.log('handler');
+    rows = $("#aRngTbl").DataTable().rows('.selected').data();
+    if (rows.length != 1) return;
+
+    if (!rng1) { // set rng1 and do popup 
+      rng1 = rows[0][7];
+
+      $("#constraintsDialog2").dialog({
+        modal: true,
+        buttons: {
+          Ok: function() {
+            // $("#aRngTbl tbody").on('click', 'tr', handler);
+            $(this).dialog("close");
+          },
+          Cancel: function() {
+            $(this).dialog("close");
+          }
+        }
+      });
+    } else {
+      var rng2 = rows[0][7];
+      rng1.setLocationHint(rng2.loc);
+      $("#aRngTbl tbody").unbind('click', handler);
+      
+      $("#constraintsDialog3").dialog({
+        modal: true,
+        buttons: {Ok: function() {$(this).dialog("close");}}
+      });
+      
+    }
+  }
+
+  // first dialog popup 
+  $("#constraintsDialog1").dialog({
+    modal: true,
+    buttons: {
+      Ok: function() {
+        $("#aRngTbl tbody").on('click', 'tr', handler);
+        $(this).dialog("close");
+      },
+      Cancel: function() {
+        $(this).dialog("close");
+      }
+    }
+  });
 }
