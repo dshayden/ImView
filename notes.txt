@@ -1,0 +1,13 @@
+* Each axes is paired to one AnnotationRange. Each AnnotationRange is paired
+  with some kind of annotation (e.g. rectangle), which is usually paired with a
+  person, but what about group annotation?
+* AnnotationRange is responsible for drawing editable or non-editable (e.g.
+  interpolated or current) objects.
+* Editable objects may be updated/redrawn each frame, based on hints/constraints
+  * so need to call drawEditable each frame if there are hints or constraints.
+* Editable objects may be modified by hotkeys/mouse, but beholden to constraints.
+  * so editable objects must be notified of any changes.
+* Non-Editable objects may be updated/redrawn/removed/added on a given frame,
+  but only draw values from data[] (and in particular do not use hints/constraints)
+  * there can be multiple for a single AnnotationRange, e.g. for prev, cur,
+    interp, next. maintain separate, named object for each?

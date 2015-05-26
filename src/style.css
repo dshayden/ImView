@@ -56,9 +56,9 @@ input[type=text].controls:disabled {
   background-color: white;
 }
 
-#aGrpTblDiv {
+#aGrpTblDiv, #aRngTblDiv, #aInstTblDiv {
   font-size: 75%;
-  width: 75%;
+  width: 85%;
 }
 
 #aGrpControlsDiv {

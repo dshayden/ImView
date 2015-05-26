@@ -130,7 +130,8 @@ function init() {
           "targets": [3],   // Name 
           "visible": true,
           "searchable": true, 
-          "sTitle": "Name"
+          "sTitle": "Name",
+          "width": "50%"
         },
         {
           "targets": [4],   // Type 
@@ -240,11 +241,9 @@ function init() {
       }
       setImage(idx);
     });
-    var f = '1432666368.json';
-    loadStateFromServer(f);
 
-    // for testing
-    // var f = '1432226322.json';
+    // load state
+    // var f = '1432666368.json';
     // loadStateFromServer(f);
 
   });
