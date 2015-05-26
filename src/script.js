@@ -245,6 +245,7 @@ function init() {
     // load state
     // var f = '1432666368.json';
     // loadStateFromServer(f);
+    loadStateFromServer('1432275450.json');
 
   });
 }
@@ -256,11 +257,15 @@ function initCanvas() {
   fcanvas.setBackgroundImage(bgImg);
 
   bgImEl.addEventListener("load", function() {
-    console.log('load');
-    drawAnnotations(imIdx, false);
-    fcanvas.renderAll();
-    isLoading = false;
-  });
+    var drawFcn = function() {
+      drawAnnotations(imIdx, false);
+      fcanvas.renderAll();
+      isLoading = false;
+    }
+    if (isPlaying) drawFcn();
+    else window.requestAnimationFrame(drawFcn);
+  })
+
   setImage(imIdx);
 }
 
