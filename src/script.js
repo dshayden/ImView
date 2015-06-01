@@ -25,6 +25,11 @@ function init() {
     fcanvas = new fabric.Canvas(canvas);
     fcanvas.selection = false; // disable group (multiple) selection
     fcanvas.uniScaleTransform = true;
+
+    // fcanvas.observe('mouse:over', function(e) {
+    //   console.log(e.target.rngClass.getRid());
+    // });
+
     // fcanvas.defaultCursor = 'url("src/point.cur") 10 10, crosshair';
 
 
@@ -34,6 +39,7 @@ function init() {
 
     initCanvas();
     setTimeout(initCanvas, 3000);
+
 
     // callbacks
     $("#divCont").keypress(processKeys);
@@ -221,6 +227,12 @@ function init() {
     });
     $(".accordion").accordion({clearStyle: true, autoHeight: false});
 
+    $("#showTooltipsCheck").prop("checked", false); // default to false
+    $("#showTooltipsCheck").click( function() {
+      handleTooltips( $("#showTooltipsCheck").prop("checked") );
+    });
+    handleTooltips($("#showTooltipsCheck").prop("checked"));
+
     var frameRng = $("#frameRng");
     frameRng.change(function(e) {setImage($("#frameRng").val()-1);});
     frameRng.prop({
@@ -248,6 +260,135 @@ function init() {
     loadStateFromServer('1432275450.json');
 
   });
+}
+
+function handleTooltips(doShow) {
+
+  if (doShow) {
+    $("#playBtn").tooltip({
+      content:"Play video, skipping +/- frames according to the Frame Skip value.",
+      items:"#playBtn"
+    });
+    $("#backBtn").tooltip({
+      content:"Go back according to Frame Skip value.",
+      items:"#backBtn"
+    });
+    $("#fwdBtn").tooltip({
+      content:"Go forward according to Frame Skip value.",
+      items: "#fwdBtn"
+    });
+    $("#aAddBtn").tooltip({
+      content:"Add an Annotation Group (e.g. person, object, group).",
+      items:"#aAddBtn"
+    });
+    $("#aEditBtn").tooltip({
+      content:"Edit an Annotation Group's name/color; must have an Annotation Group row selected.",
+      items: "#aEditBtn"
+    });
+    $("#aTBeginBtn").tooltip({
+      content:"Begin an Annotation Range; must have an Annotation Group row and an Annotation Type selected.",
+      items: "#aTBeginBtn"
+    });
+    $("#aTContinueBtn").tooltip({
+      content:"Resume editing of an Annotation Range; must have an Annotation Range row selected.",
+      items:"#aTContinueBtn"
+    });
+    $("#aTEndBtn").tooltip({
+      content: "End editing of an Annotation Range.",
+      items: "#aTEndBtn"
+    });
+    $("#aTSelect").tooltip({
+      content: "Select an Annotation Type.",
+      items: "#aTSelect"
+    });
+    $("#aTDelBtn").tooltip({
+      content: "Delete one or more Annotation Ranges and all their Instances. Must 1+ Annotation Range rows selected.",
+      items: "#aTDelBtn"
+    });
+    $("#aTLocConstraintBtn").tooltip({
+      content: "Set default location of an Annotation Range based on the location of another.",
+      items: "#aTLocConstraintBtn"
+    });
+    $("#aiDelBtn").tooltip({
+      content: "Delete an Annotation Instance from an Annotation Range. Requires 1+ Annotation Instance rows to be selected.",
+      items: "#aiDelBtn"
+    });
+    $("#aiGotoBtn").tooltip({
+      content: "Seek video to the frame that contains a given Annotation Instance. Requires an Annotation Instance row to be selceted.",
+      items: "#aiGotoBtn"
+    });
+    $("#curFrameEdit").tooltip({
+      content: "Current video frame, can type in specific frames to seek to.",
+      items: "#curFrameEdit"
+    });
+    $("#playSkip").tooltip({
+      content: "Frame Skip value, # of frames to skip when going forward / backward / playing. can be +/- .",
+      items: "#playSkip",
+    });
+  } 
+
+  else {
+    $("#playBtn").tooltip({
+      content:"",
+      items:""
+    });
+    $("#backBtn").tooltip({
+      content:"",
+      items:""
+    });
+    $("#fwdBtn").tooltip({
+      content:"",
+      items: ""
+    });
+    $("#aAddBtn").tooltip({
+      content:"",
+      items:""
+    });
+    $("#aEditBtn").tooltip({
+      content:"",
+      items: ""
+    });
+    $("#aTBeginBtn").tooltip({
+      content:"",
+      items: ""
+    });
+    $("#aTContinueBtn").tooltip({
+      content:"",
+      items:""
+    });
+    $("#aTEndBtn").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#aTSelect").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#aTDelBtn").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#aTLocConstraintBtn").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#aiDelBtn").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#aiGotoBtn").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#curFrameEdit").tooltip({
+      content: "",
+      items: ""
+    });
+    $("#playSkip").tooltip({
+      content: "",
+      items: "",
+    });
+  }
 }
 
 function initCanvas() {

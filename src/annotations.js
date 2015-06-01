@@ -1,7 +1,18 @@
 
 var RectangleRange = function(style, id) {
+
   // public methods
   this.getType = function() {return 'Rect';};
+
+  this.loc = function(frame) {
+    var dat = getData(frame); // x,y,w,h
+    if (!dat) return false;
+
+    dat[0] = dat[0] + dat[2]/2;
+    dat[1] = dat[1] + dat[3]/2;
+    dat.splice(2,1);
+    return dat;
+  }
 
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
     var isNew = false;
@@ -258,6 +269,8 @@ var PointRange = function(style, id) {
   }
 
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
+    console.log('PointRange: drawEditable');
+
     var isNew = false;
     if (!editObj) {
       cw = fcanvas.width; ch = fcanvas.height;
@@ -275,6 +288,7 @@ var PointRange = function(style, id) {
       // fcanvas.hoverCursor = 'url("src/point.cur") 1 1, crosshair';
 
       var onMouseMove = function(e) {
+        console.log('PointRange onMouseMove');
         if (editObj) {
           r = rad; 
           y = e.e.layerY-rad; x = e.e.layerX-rad;
@@ -292,19 +306,19 @@ var PointRange = function(style, id) {
 
       // replace existing mouse up callbacks with a custom one
       // while PointRange is drawing an Editable
-      storedMouseUpEvents = fcanvas.__eventListeners['mouse:up'];
-      var onMouseUp = function(e) {
-        if (editObj && !e.target ) {
-          r = rad; y = e.e.layerY-rad; x = e.e.layerX-rad;
-          editObj.setTop(y); editObj.setLeft(x);
-          curData = [x, y, r];
-
-          editObj.setCoords();
-          fcanvas.renderAll();
-          fcanvas.setActiveObject(editObj);
-        }
-      };
-      fcanvas.__eventListeners['mouse:up'] = [onMouseUp];
+      // storedMouseUpEvents = fcanvas.__eventListeners['mouse:up'];
+      // var onMouseUp = function(e) {
+      //   if (editObj && !e.target ) {
+      //     r = rad; y = e.e.layerY-rad; x = e.e.layerX-rad;
+      //     editObj.setTop(y); editObj.setLeft(x);
+      //     curData = [x, y, r];
+      //
+      //     editObj.setCoords();
+      //     fcanvas.renderAll();
+      //     fcanvas.setActiveObject(editObj);
+      //   }
+      // };
+      // fcanvas.__eventListeners['mouse:up'] = [onMouseUp];
 
 
       editObj.on('selected', function() {
@@ -340,15 +354,20 @@ var PointRange = function(style, id) {
   }
 
   this.deleteEditable = function(fcanvas) {
+    console.log('PointRange: deleteEditable');
     if (!editObj) return;
 
-    fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
+    // fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
+    // storedMosueUpEvents = null; 
+    
     fcanvas.__eventListeners['mouse:move'] = storedMouseMoveEvents;
-    storedMosueUpEvents = null; storedMouseMoveEvents = null;
+    storedMouseMoveEvents = null;
     fcanvas.hoverCursor = storedCanvasCursor;
     storedCanvasCursor = '';
 
     fcanvas.remove(editObj);
+    editObj.on('selected', function() {});
+
     editObj = null;
   }
 
@@ -548,29 +567,67 @@ var GroupRange = function(style, id) {
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
     curFrame = frame;
 
-    if (storedMouseUpEvents) return;
+    if (storedMouseUpEvents) {
+      console.log(storedMouseUpEvents);
+
+      // update enclosing rect if curData.length >= 1
+      if (curData.length == 0) return;
+      var r = getEnclosingRect(curData, frame);
+
+      editObj.left = r[0];
+      editObj.top = r[1];
+      editObj.width = r[2];
+      editObj.height = r[3];
+
+      if (curData.length == 1) {
+        editObj.height += 10;
+        eidtObj.width += 10;
+      }
+      fcanvas.renderAll();
+      selectCb();
+      return;
+    }
 
     storedMouseUpEvents = fcanvas.__eventListeners['mouse:up'];
+
     var onMouseUp = function(e) {
-      var obj = e.target;
-      if (!obj || !('rngClass' in obj)) {
-        for (i=0;i<curData.length;i++) {
-          curData[i].highlight(fcanvas,false);
-          curData[i].drawReadable(fcanvas, curFrame, {});
+      var canvasObj = e.target;
+
+      // if user clicked on empty space then clear selection
+      if (!canvasObj || !('rngClass' in canvasObj)) {
+        if (editObj) {
+          fcanvas.remove(editObj);
+          editObj = null;
         }
-        if (curData.length>0) fcanvas.renderAll();
-        curData = [];       
+        curData = [];
         selectCb();
         return;
       }
+
       obj = e.target.rngClass;
+      if (!editObj) {
+        var loc = obj.loc(frame);  // [x,y]
+        editObj = createRect(fill, loc[0]-10, loc[1]-10, 20, 20);
+        editObj.selectable = false;
+
+        fcanvas.add(editObj);
+        fcanvas.sendToBack(editObj);
+      }
 
       var idx = Lazy(curData).indexOf(obj);
-      if (idx != -1) return;
-      obj.highlight(fcanvas, true);
-      obj.drawReadable(fcanvas, curFrame, {});
-      fcanvas.renderAll();
+      if (idx != -1) return; // or do we unselect?
       curData.push(obj);
+
+      if (curData.length > 1) {
+        var r = getEnclosingRect(curData, frame);
+        editObj.left = r[0];
+        editObj.top = r[1];
+        editObj.width = r[2];
+        editObj.height = r[3];
+        fcanvas.renderAll();
+      }
+      editObj.setCoords(); 
+
       selectCb();
     };
     fcanvas.__eventListeners['mouse:up'] = [onMouseUp];
@@ -587,15 +644,16 @@ var GroupRange = function(style, id) {
   }
 
   this.deleteEditable = function(fcanvas) {
+    if (storedMouseUpEvents == null && editObj == null) return;
+
     fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
     storedMouseUpEvents = null;
 
-    for (i=0;i<curData.length;i++) {
-      curData[i].highlight(fcanvas,false);
-      curData[i].drawReadable(fcanvas, frame, {});
-    }
+    fcanvas.remove(editObj);
+    editObj = null;
+
     if (curData.length>0) fcanvas.renderAll();
-    // curData = [];       
+    curData = [];       
   }
 
   this.drawReadable = function(fcanvas, frame, style) {
@@ -604,19 +662,10 @@ var GroupRange = function(style, id) {
       return;
     }
     
-    dat = this.getData(frame); // list of rids
-    var locs = curRngObjs.map(function(rngObj, idx, arr) {return rngObj.loc(frame); });
-    
-    var xs = Lazy(locs.map(function(pair, idx, arr) {return pair[0];}));
-    var ys = Lazy(locs.map(function(pair, idx, arr) {return pair[1];}));
-
-    var left = xs.min();
-    var top = ys.min();
-    var width = xs.max() - left;
-    var height = ys.max() - top;
+    var r = getEnclosingRect(curRngObjs, frame);
 
     if (!intObj) {
-      intObj = createRect(fill, left, top, width, height);
+      intObj = createRect(fill, r[0], r[1], r[2], r[3]);
       intObj.fill = fill;
       intObj.stroke = fill;
       intObj.selectable = false;
@@ -627,10 +676,10 @@ var GroupRange = function(style, id) {
       return;
     }
     
-    intObj.left = left;
-    intObj.top = top;
-    intObj.width = width;
-    intObj.height = height;
+    intObj.left = r[0];
+    intObj.top = r[1];
+    intObj.width = r[2];
+    intObj.height = r[3];
     intObj.setCoords();
   }
 
@@ -644,7 +693,6 @@ var GroupRange = function(style, id) {
       endFrame = Lazy(mask).max();
       return true;
     } else return false;
-
   };
 
   this.uncommit = function(frame) {
@@ -703,6 +751,23 @@ var GroupRange = function(style, id) {
 
   // private methods
   
+  function getEnclosingRect(objs, frame) {
+
+    var locs = Lazy(objs.map(function(rngObj, idx, arr) {return rngObj.loc(frame); }));
+    locs = Lazy(locs.filter(function(x) {if(x.length == 2)return true; else return false;}).value());
+
+    if (locs.length() == 0) return [0, 0, 0, 0];
+
+    var xs = locs.map(function(pair, idx, arr) {return pair[0];});
+    var ys = locs.map(function(pair, idx, arr) {return pair[1];});
+
+    var left = xs.min();
+    var top = ys.min();
+    var width = xs.max() - left;
+    var height = ys.max() - top;
+    return [left, top, width, height];
+  }
+
   function createRect(cstr, left, top, width, height) {
     var rect = new fabric.Rect({
       'fill': cstr,
@@ -788,7 +853,6 @@ var GroupRange = function(style, id) {
   // artificially lower the alpha value for easier visualization
   var c = parseColor(style.fill);
   var fill = 'rgba('+c[0].toString()+','+c[1].toString()+','+c[2].toString()+',0.4)';
-  console.log(fill);
 
   var D = -1; // non-fixed dimension 
   var data = new Array(0);

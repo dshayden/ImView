@@ -17,11 +17,9 @@
   <script src="src/jquery.js"></script>
   <script src="src/ui/jquery-ui.js"></script>
   <script src="src/jquery.alphanum.js"></script>
-  
   <script src="src/fabric.js"></script>
   <script src="src/tables/jquery.dataTables.js"></script>
   <script src="src/tables/extensions/TableTools/js/dataTables.tableTools.js"></script>
-  
   <script src="src/lazy.js"></script>
   <script src="src/annotations.js"></script>
   <script src="src/script.js"></script>
@@ -32,14 +30,11 @@
         <h3>Playback</h3> 
         <div><p></p></div>
       </div>
-      <!-- <div class="accordion"> -->
-      <!--   <h3>Viewing Options</h3>  -->
-      <!--   <div><p></p></div> -->
-      <!-- </div> -->
       <div class="accordion">
         <h3>Options</h3> 
         <div>
           <button type="button" id="saveBtn">Save</button>
+          <input type="checkbox" id="showTooltipsCheck">Show Tooltips</input>
         </div>
       </div>
       <div class="accordion">
@@ -96,7 +91,6 @@
       </div>
       <div id="controls2">
        <div class="controls"></div>
-        <!-- <input type="number" class="controls" id="playSkip" value="1"></input> -->
         <input class="controls" id="playSkip" value="1"></input>
        <div class="controls"></div>
       </div>
@@ -110,10 +104,10 @@
     </div>
 
     <div id="constraintsDialog1" title="Set Location Constraint" style="display:none;">
-      Select the annotation instance that you wish to set the constraint for.
+      Select the Annotation Range that you wish to set the Location Hint for.
     </div>
     <div id="constraintsDialog2" title="Set Location Constraint" style="display:none;">
-      Select the annotation instance that imposes the constraint.
+      Select the Annotation Range that imposes the Hint.
     </div>
 
     <div id="constraintsDialog3" title="Set Location Constraint" style="display:none;">
