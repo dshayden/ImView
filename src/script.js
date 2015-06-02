@@ -320,6 +320,11 @@ function handleTooltips(doShow) {
       content: "Frame Skip value, # of frames to skip when going forward / backward / playing. can be +/- .",
       items: "#playSkip",
     });
+    $("#editNewAnnoGrpCheck").tooltip({
+      content: "Require user to edit name/color of new Annotation Groups (as opposed to defaults).",
+      items: "#editNewAnnoGrpCheck",
+    });
+
   } 
 
   else {
@@ -380,6 +385,10 @@ function handleTooltips(doShow) {
       items: ""
     });
     $("#playSkip").tooltip({
+      content: "",
+      items: "",
+    });
+    $("#editNewAnnoGrpCheck").tooltip({
       content: "",
       items: "",
     });
@@ -910,13 +919,16 @@ function onAiDelBtn() {
   $("#aRngTbl").DataTable().rows( function(idx,data,node) {
     newRngRow = data; rng = data[7].range();
     newRngRow[5] = rng[0]; newRngRow[6] = rng[1];
-    $("#aRngTbl").DataTable().row(data).data(newRngRow);
+    $("#aRngTbl").DataTable().row(idx).data(newRngRow);
   });
 
   var allData = $("#aRngTbl").DataTable().columns(7).data();
   allData[0].forEach( function(aRng, idx, arr) {
     aRng.drawReadable(fcanvas, imIdx);
   });
+
+  $("#aRngTbl").DataTable().rows().draw();
+  colorizeRngTbl();
 }
 
 function onAiGotoBtn() {
