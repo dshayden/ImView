@@ -26,13 +26,6 @@ function init() {
     fcanvas.selection = false; // disable group (multiple) selection
     fcanvas.uniScaleTransform = true;
 
-    // fcanvas.observe('mouse:over', function(e) {
-    //   console.log(e.target.rngClass.getRid());
-    // });
-
-    // fcanvas.defaultCursor = 'url("src/point.cur") 10 10, crosshair';
-
-
     fcanvas.on('mouse:up', function(e) {
 
     });
@@ -233,6 +226,8 @@ function init() {
     });
     handleTooltips($("#showTooltipsCheck").prop("checked"));
 
+    $("#editNewAnnoGrpCheck").prop("checked", true);
+
     var frameRng = $("#frameRng");
     frameRng.change(function(e) {setImage($("#frameRng").val()-1);});
     frameRng.prop({
@@ -257,13 +252,13 @@ function init() {
     // load state
     // var f = '1432666368.json';
     // loadStateFromServer(f);
-    loadStateFromServer('1432275450.json');
+    // loadStateFromServer('1433211675.json');
+    loadStateFromServer('latest');
 
   });
 }
 
 function handleTooltips(doShow) {
-
   if (doShow) {
     $("#playBtn").tooltip({
       content:"Play video, skipping +/- frames according to the Frame Skip value.",
@@ -436,13 +431,53 @@ function addGroupAnnotationUi() {
 
   var grpTable = $("#aGrpTbl").DataTable();
   var gid = maxGid + 1;
-  maxGid = gid;
-
   name = "Annotation-" + pad( gid.toString(), 3 );
-  grpTable.row.add( [maxGid, name, color] ).draw();
-  colorizeGrpTbl();
 
-  $(".accordion").accordion("refresh");
+  if ($("#editNewAnnoGrpCheck").prop("checked")) {
+    var hcolor = rgbaStrToHexStr(color);
+
+    $("#grpColorInput").val(hcolor);
+    $("#grpNameInput").val(name);
+    $("grpNameInput").select();
+
+    $("#grpEditDialog").dialog({ 
+      modal: true,
+      buttons: {
+        Ok: function() {
+          var newName = $("#grpNameInput").val(),
+              newColor = $("#grpColorInput").val();
+
+          if (newName.length == 0) {
+            console.log('cannot have empty name');
+            return;
+          }
+
+          if ( newName === name && newColor === hcolor ) {
+            $(this).dialog("close");
+            return;
+          }
+          
+          // update grpTbl row, rngTbl entries, relevant annotation range objs
+          color = hexStrToRgbaStr(newColor);
+          name = newName;
+          $(this).dialog("close");
+
+          grpTable.row.add( [maxGid, name, color] ).draw();
+          colorizeGrpTbl();
+          $(".accordion").accordion("refresh");
+          maxGid = gid;
+        },
+        Cancel: function() {
+          $(this).dialog("close");
+        }
+      }
+    });
+  } else {
+    grpTable.row.add( [maxGid, name, color] ).draw();
+    colorizeGrpTbl();
+    $(".accordion").accordion("refresh");
+    maxGid = gid;
+  }
 }
 
 function randomColor(alpha) {
@@ -617,8 +652,6 @@ function onATBeginBtn(evt) {
 // }
 
 function processKeys(evt) {
-  // console.log(evt.keyCode);
-
   evt.key = String.fromCharCode(evt.keyCode);
   if (evt.key == 'g' || evt.key == 'G') {
     btn = $("#playBtn")[0];
@@ -742,6 +775,7 @@ function onATContinueBtn() {
 
 function onATEndBtn() {
   removeCurrentEditable();
+  saveStateToTimestampedFile();
 }
 
 function hexStrToRgbaStr(s) {
@@ -913,6 +947,10 @@ function onATDelBtn() {
 }
 
 function onSaveBtn() {
+  saveStateToTimestampedFile();
+}
+
+function saveStateToTimestampedFile() {
   // serialized = {
   //  .gids[{}]
   //       .gid
@@ -1002,11 +1040,12 @@ function loadStateFromServer(fname) {
         // references to other objects
         // todo: handle obj refs when ranges get deleted
         var allData = $("#aRngTbl").DataTable().columns(7).data()[0];
-        for (i=0;i<allData.length;i++) {
+        for (var i=0;i<allData.length;i++) {
           if (allData[i].getType() === 'Group') {
             allData[i].updateObjRefs();
           }
         }
+
 
         grpTable.rows().draw();
         rngTable.rows().draw();
@@ -1015,6 +1054,10 @@ function loadStateFromServer(fname) {
         colorizeRngTbl();
         $(".accordion").accordion("refresh");
         drawAnnotations(imIdx, true);
+
+        // check rids
+        var allData = $("#aRngTbl").DataTable().columns(0).data()[0];
+        maxRid = Lazy(allData).max() + 1;
       });
 }
 
@@ -1022,7 +1065,6 @@ function onATConstraintBtn() {
   var rng1 = null;
 
   var handler = function() {
-    console.log('handler');
     rows = $("#aRngTbl").DataTable().rows('.selected').data();
     if (rows.length != 1) return;
 

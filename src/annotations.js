@@ -269,8 +269,6 @@ var PointRange = function(style, id) {
   }
 
   this.drawEditable = function(fcanvas, frame, selectCb, style) {
-    console.log('PointRange: drawEditable');
-
     var isNew = false;
     if (!editObj) {
       cw = fcanvas.width; ch = fcanvas.height;
@@ -288,7 +286,6 @@ var PointRange = function(style, id) {
       // fcanvas.hoverCursor = 'url("src/point.cur") 1 1, crosshair';
 
       var onMouseMove = function(e) {
-        console.log('PointRange onMouseMove');
         if (editObj) {
           r = rad; 
           y = e.e.layerY-rad; x = e.e.layerX-rad;
@@ -354,7 +351,6 @@ var PointRange = function(style, id) {
   }
 
   this.deleteEditable = function(fcanvas) {
-    console.log('PointRange: deleteEditable');
     if (!editObj) return;
 
     // fcanvas.__eventListeners['mouse:up'] = storedMouseUpEvents;
@@ -568,8 +564,6 @@ var GroupRange = function(style, id) {
     curFrame = frame;
 
     if (storedMouseUpEvents) {
-      console.log(storedMouseUpEvents);
-
       // update enclosing rect if curData.length >= 1
       if (curData.length == 0) return;
       var r = getEnclosingRect(curData, frame);
@@ -661,7 +655,7 @@ var GroupRange = function(style, id) {
       if (intObj) this.deleteReadable(fcanvas);
       return;
     }
-    
+
     var r = getEnclosingRect(curRngObjs, frame);
 
     if (!intObj) {
