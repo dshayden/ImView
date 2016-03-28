@@ -228,6 +228,25 @@ function init() {
 
     $("#editNewAnnoGrpCheck").prop("checked", true);
 
+    $("#showImagesCheck").prop("checked", true);
+    $("#showImagesCheck").click( function() {
+      if ($("#showImagesCheck").prop("checked")) fcanvas.setBackgroundImage(bgImg);
+      else fcanvas.setBackgroundImage(null);
+      setImage(imIdx);       
+    });
+
+    $("#showAnnotationsCheck").prop("checked", true);
+    $("#showAnnotationsCheck").click( function() {
+      if (!$("#showAnnotationsCheck").prop("checked")) {
+        var allData = $("#aRngTbl").DataTable().columns(7).data();
+        allData[0].forEach( function(aRng, idx, arr) {
+          aRng.deleteReadable(fcanvas);
+        });
+      }
+      drawAnnotations(imIdx, true);
+      // setImage(imIdx);       
+    });
+
     var frameRng = $("#frameRng");
     frameRng.change(function(e) {setImage($("#frameRng").val()-1);});
     frameRng.prop({
@@ -249,12 +268,11 @@ function init() {
       setImage(idx);
     });
 
-    // load state
-    // var f = '1432666368.json';
-    // loadStateFromServer(f);
+    // Ex: load state from specific file
     // loadStateFromServer('1433211675.json');
+    
+    // load state from latest file
     loadStateFromServer('latest');
-
   });
 }
 
@@ -415,11 +433,14 @@ function initCanvas() {
 }
 
 function drawAnnotations(frame, doRender) {
-  var allData = $("#aRngTbl").DataTable().columns(7).data();
-  allData[0].forEach( function(aRng, idx, arr) {
-    aRng.drawReadable(fcanvas, imIdx);
-  });
-  rid = curSelRid; obj = curSelData;
+  if ($("#showAnnotationsCheck").prop("checked")) {
+    var allData = $("#aRngTbl").DataTable().columns(7).data();
+    allData[0].forEach( function(aRng, idx, arr) {
+      aRng.drawReadable(fcanvas, imIdx);
+    });
+  }
+
+  rid = curSelRid; obj = curSelData; // necessary for below anonymous fcn
   if (curSelRid != -1) {
     curSelData.drawEditable(fcanvas, imIdx, function() {
       curSelRid = rid;
@@ -471,7 +492,7 @@ function addGroupAnnotationUi() {
           name = newName;
           $(this).dialog("close");
 
-          grpTable.row.add( [maxGid, name, color] ).draw();
+          grpTable.row.add( [gid, name, color] ).draw();
           colorizeGrpTbl();
           $(".accordion").accordion("refresh");
           maxGid = gid;
@@ -482,7 +503,8 @@ function addGroupAnnotationUi() {
       }
     });
   } else {
-    grpTable.row.add( [maxGid, name, color] ).draw();
+    grpTable.row.add( [gid, name, color] ).draw();
+
     colorizeGrpTbl();
     $(".accordion").accordion("refresh");
     maxGid = gid;

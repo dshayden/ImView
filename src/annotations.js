@@ -575,7 +575,7 @@ var GroupRange = function(style, id) {
 
       if (curData.length == 1) {
         editObj.height += 10;
-        eidtObj.width += 10;
+        editObj.width += 10;
       }
       fcanvas.renderAll();
       selectCb();
@@ -861,7 +861,7 @@ var GroupRange = function(style, id) {
 
   var rid = id;
   var storedMouseUpEvents = null;
-  var curData = [];
+  var curData = [];  // RangeAnnotation objects
   var curFrame = -1;
   var beginFrameSet = false;
 
