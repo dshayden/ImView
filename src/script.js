@@ -730,6 +730,7 @@ function processKeys(evt) {
     commitAnnotation();
   }
 
+  // Hack for a rare bug where the images don't load on init. Cause unknown.
   else if (evt.key == 'p' || evt.key == 'P') {
     initCanvas();
   }
